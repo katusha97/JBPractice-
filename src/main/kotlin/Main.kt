@@ -1,21 +1,19 @@
-import java.io.File
-import java.io.InputStream
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.stream.Collectors
+import java.util.stream.Stream
 
 fun main() {
     val scan = java.util.Scanner(System.`in`)
-    val inputStream: InputStream = File(scan.next()).inputStream()
-    val lineList = ArrayList<String>()
-    inputStream.bufferedReader().forEachLine { lineList.add(it) }
+    val occurrences = countOccurrences(Files.lines(Path.of(scan.next())))
 
-    val (numberOfOccurences, lineNumbers) = countOccurrences(lineList)
-
-    for (entry in numberOfOccurences.entries) {
-        if (entry.value <= 1) {
+    for ((key, value) in occurrences.entries) {
+        if (setOf(value).size <= 1) {
             continue
         }
 
-        print("Lines with '${entry.key}' : ")
-        val indices = lineNumbers[entry.key]!!
+        print("Lines with '${key}' : ")
+        val indices = value
         for ((index, lineNumber) in indices.withIndex()) {
             print("$lineNumber")
             if (index != indices.size - 1) {
@@ -26,23 +24,15 @@ fun main() {
     }
 }
 
-data class LiteralsCount(val numberOfOccurrences : Map<String, Int>, val lineNumbers : Map<String, Set<Int>>)
-
-fun countOccurrences(lines: List<String>): LiteralsCount {
-    val numberOfOccurrences = HashMap<String, Int>()
-    val lineNumbers = HashMap<String, HashSet<Int>>()
-    for ((lineNumber, line) in lines.withIndex()) {
-        val currList = find(line)
-        for (str in currList) {
-            if (!numberOfOccurrences.containsKey(str)) {
-                numberOfOccurrences[str] = 0
-                lineNumbers[str] = HashSet()
-            }
-            numberOfOccurrences[str] = numberOfOccurrences[str]!! + 1
-            lineNumbers[str]!!.add(lineNumber)
-        }
+fun countOccurrences(stream: Stream<String>): Map<String, List<Int>> {
+    var lineNumber = 0
+    return stream.sequential().flatMap { str ->
+        val currIndex = lineNumber++
+        find(str).stream().map { occurrence -> Pair(currIndex, occurrence) }
     }
-    return LiteralsCount(numberOfOccurrences, lineNumbers)
+        .collect(Collectors.toMap({ pair -> pair.second }, { pair -> listOf(pair.first) }, { l1, l2 ->
+            l1 + l2
+        }))
 }
 
 fun find(line: String): ArrayList<String> {
@@ -56,9 +46,15 @@ fun find(line: String): ArrayList<String> {
         }
 
         i++
+        var countSlash = 0
         var curr = ""
-        while (i < line.length && (line[i] != ch || line[i - 1] == '\\')) {
+        while (i < line.length && (line[i] != ch || countSlash % 2 == 1)) {
             curr += line[i]
+            if (line[i] == '\\') {
+                countSlash++
+            } else {
+                countSlash = 0
+            }
             i++
         }
         if (i < line.length && line[i] == ch) {

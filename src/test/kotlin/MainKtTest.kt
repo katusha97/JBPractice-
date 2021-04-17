@@ -1,4 +1,5 @@
 import org.junit.Assert
+import java.util.stream.Stream
 
 internal class MainKtTest {
 
@@ -11,11 +12,31 @@ internal class MainKtTest {
                 "for data in database:\n" +
                 "    if data['id'] % 10 == 0 or data['id'] == 13:\n" +
                 "        print(data['value'])\n"
-        val (numbers, lines) = countOccurrences(testProg.split("\n"))
-        Assert.assertEquals(hashMapOf(Pair("id", 3), Pair("value", 2), Pair("Hello world!", 1)), numbers)
-        Assert.assertEquals(hashMapOf(Pair("id", hashSetOf(0, 5)),
-            Pair("value", hashSetOf(0, 6)),
-            Pair("Hello world!", hashSetOf(2))), lines)
+        val stream = testProg.split("\n").stream()
+        val occurrences = countOccurrences(stream)
+        Assert.assertEquals(
+            hashMapOf(
+                Pair("id", arrayListOf(0, 5, 5)),
+                Pair("value", arrayListOf(0, 6)),
+                Pair("Hello world!", arrayListOf(2))
+            ), occurrences
+        )
+    }
+
+    @org.junit.jupiter.api.Test
+    fun testOnSlashes1() {
+        val testStr = "print(\"a\\\\\", \"a\\\\\")"
+        val stream = Stream.of(testStr)
+        val occurrences = countOccurrences(stream)
+        Assert.assertEquals(hashMapOf(Pair("a\\\\", arrayListOf(0, 0))), occurrences)
+    }
+
+    @org.junit.jupiter.api.Test
+    fun testOnSlashes2() {
+        val testStr = "print(\"a\\\\\\\"\", \"a\\\\\")"
+        val stream = Stream.of(testStr)
+        val occurrences = countOccurrences(stream)
+        Assert.assertEquals(hashMapOf(Pair("a\\\\\\\"", arrayListOf(0)), Pair("a\\\\", arrayListOf(0))), occurrences)
     }
 
     @org.junit.jupiter.api.Test
